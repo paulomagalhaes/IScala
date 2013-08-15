@@ -25,33 +25,39 @@ package object msg {
         session: UUID,
         msg_type: MsgType)
 
-    object MsgType extends Enumeration {
-        type MsgType = Value
-
-        val execute_request,
-            execute_reply,
-            object_info_request,
-            object_info_reply,
-            complete_request,
-            complete_reply,
-            history_request,
-            history_reply,
-            connect_request,
-            connect_reply,
-            kernel_info_request,
-            kernel_info_reply,
-            shutdown_request,
-            shutdown_reply,
-            stream,
-            display_data,
-            pyin,
-            pyout,
-            pyerr,
-            status,
-            input_request,
-            input_reply = Value
+    sealed trait MsgType extends MsgType.Value {
+        type contentType <: Content
     }
-    type MsgType = MsgType.MsgType
+    sealed trait RequestMsgType extends MsgType {
+        override type contentType <: Request
+    }
+    sealed trait ReplyMsgType extends MsgType {
+        override type contentType <: Reply
+    }
+    object MsgType extends Enum[MsgType] {
+        case object execute_request extends RequestMsgType { type contentType = execute_request }
+        case object execute_reply extends ReplyMsgType { type contentType = execute_reply }
+        case object object_info_request extends RequestMsgType { type contentType = object_info_request }
+        case object object_info_reply extends ReplyMsgType { type contentType = object_info_reply }
+        case object complete_request extends RequestMsgType { type contentType = complete_request }
+        case object complete_reply extends ReplyMsgType { type contentType = complete_reply }
+        case object history_request extends RequestMsgType { type contentType = history_request }
+        case object history_reply extends ReplyMsgType { type contentType = history_reply }
+        case object connect_request extends RequestMsgType { type contentType = connect_request }
+        case object connect_reply extends ReplyMsgType { type contentType = connect_reply }
+        case object kernel_info_request extends RequestMsgType { type contentType = kernel_info_request }
+        case object kernel_info_reply extends ReplyMsgType { type contentType = kernel_info_reply }
+        case object shutdown_request extends RequestMsgType { type contentType = shutdown_request }
+        case object shutdown_reply extends ReplyMsgType { type contentType = shutdown_reply }
+        case object stream extends ReplyMsgType { type contentType = stream }
+        case object display_data extends ReplyMsgType { type contentType = display_data }
+        case object pyin extends ReplyMsgType { type contentType = pyin }
+        case object pyout extends ReplyMsgType { type contentType = pyout }
+        case object pyerr extends ReplyMsgType { type contentType = pyerr }
+        case object status extends ReplyMsgType { type contentType = status }
+        case object input_request extends RequestMsgType { type contentType = input_request }
+        case object input_reply extends ReplyMsgType { type contentType = input_reply }
+    }
 
     sealed trait Content
     sealed trait Request extends Content
@@ -91,13 +97,11 @@ package object msg {
         // StdinNotImplementedError will be raised.
         allow_stdin: Boolean) extends Request
 
-    object ExecutionStatus extends Enumeration {
-        type ExecutionStatus = Value
-        val ok = Value
-        val error = Value
-        val abort = Value
-    }
-    type ExecutionStatus = ExecutionStatus.ExecutionStatus
+    sealed trait ExecutionStatus extends ExecutionStatus.Value
+    object ExecutionStatus extends Enum[ExecutionStatus]
+    case object OK extends ExecutionStatus
+    case object Error extends ExecutionStatus
+    case object Abort extends ExecutionStatus
 
     sealed trait execute_reply extends Reply {
         // One of: 'ok' OR 'error' OR 'abort'
@@ -124,7 +128,7 @@ package object msg {
         user_variables: List[String],
         user_expressions: Map[String, String]) extends execute_reply {
 
-        val status = ExecutionStatus.ok
+        val status = OK
     }
 
     case class execute_error_reply(
@@ -145,13 +149,13 @@ package object msg {
         // written.
         traceback: List[String]) extends execute_reply {
 
-        val status = ExecutionStatus.error
+        val status = Error
     }
 
     case class execute_abort_reply(
         execution_count: Int) extends execute_reply {
 
-        val status = ExecutionStatus.abort
+        val status = Abort
     }
 
     case class object_info_request(
@@ -298,13 +302,11 @@ package object msg {
         // in other messages.
         status: ExecutionStatus) extends Reply
 
-    object HistAccessType extends Enumeration {
-        type HistAccessType = Value
-        val range = Value
-        val tail = Value
-        val search = Value
-    }
-    type HistAccessType = HistAccessType.HistAccessType
+    sealed trait HistAccessType extends HistAccessType.Value
+    object HistAccessType extends Enum[HistAccessType]
+    case object Range extends HistAccessType
+    case object Tail extends HistAccessType
+    case object Search extends HistAccessType
 
     case class history_request(
         // If True, also return output history in the resulting dict.
@@ -447,13 +449,11 @@ package object msg {
         // written.
         traceback: List[String]) extends Reply
 
-    object ExecutionState extends Enumeration {
-        type ExecutionState = Value
-        val busy = Value
-        val idle = Value
-        val starting = Value
-    }
-    type ExecutionState = ExecutionState.ExecutionState
+    sealed trait ExecutionState extends ExecutionState.Value
+    object ExecutionState extends Enum[ExecutionState]
+    case object Busy extends ExecutionState
+    case object Idle extends ExecutionState
+    case object Starting extends ExecutionState
 
     case class status(
         // When the kernel starts to execute code, it will enter the 'busy'

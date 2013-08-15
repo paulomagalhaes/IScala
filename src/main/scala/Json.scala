@@ -6,6 +6,8 @@ import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
 
+import org.refptr.iscala.Enum
+
 object JsonUtil {
     def toJSON[T:Writes](obj: T): String =
         PlayJson.stringify(PlayJson.toJson(obj))
@@ -49,6 +51,31 @@ object NoFields {
 }
 
 object EnumJson {
+    def reads[T <: Enum[T]#Value](enum: Enum[T]): Reads[T] = new Reads[T] {
+        def reads(json: JsValue): JsResult[T] = json match {
+            case JsString(name) =>
+                println(name)
+                println(enum.values)
+                println(enum.values.map(_.name))
+                enum.values.find(_.name == name).map(JsSuccess(_)).getOrElse {
+                    println("XXX")
+                    JsError(s"Enumeration expected of type: ${enum.getClass}, but it does not appear to contain the value: $name")
+                }
+            case _ =>
+                JsError("Value of type String expected")
+        }
+    }
+
+    def writes[T <: Enum[T]#Value]: Writes[T] = new Writes[T] {
+        def writes(value: T): JsValue = JsString(value.name)
+    }
+
+    def format[T <: Enum[T]#Value](enum: Enum[T]): Format[T] = {
+        Format(reads(enum), writes[T])
+    }
+}
+
+object EnumerationJson {
     def reads[E <: Enumeration](enum: E): Reads[E#Value] = new Reads[E#Value] {
         def reads(json: JsValue): JsResult[E#Value] = json match {
             case JsString(string) =>
@@ -325,7 +352,7 @@ object TestJson {
     case class NoFields()
     case class OneField(field: String)
 
-    implicit val FooBarBazJSON = EnumJson.format(FooBarBaz)
+    implicit val FooBarBazJSON = EnumerationJson.format(FooBarBaz)
     implicit val EmbeddedJSON = Json.format[Embedded]
     implicit val TupleCaseClassJSON = Json.format[TupleCaseClass]
     implicit val EitherCaseClassJSON = Json.format[EitherCaseClass]

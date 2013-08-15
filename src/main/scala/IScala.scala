@@ -188,7 +188,7 @@ object IScala extends App {
         val _header = header.as[Header]
         val _parent_header = parent_header.as[Option[Header]]
         val _metadata = metadata.as[Metadata]
-        val _content = _header.msg_type match {
+        val _content = _header.msg_type.asInstanceOf[RequestMsgType] match {
             case MsgType.execute_request => content.as[execute_request]
             case MsgType.complete_request => content.as[complete_request]
             case MsgType.kernel_info_request => content.as[kernel_info_request]
@@ -196,6 +196,7 @@ object IScala extends App {
             case MsgType.connect_request => content.as[connect_request]
             case MsgType.shutdown_request => content.as[shutdown_request]
             case MsgType.history_request => content.as[history_request]
+            case MsgType.input_request => content.as[history_request]
         }
         val msg = Msg(idents, _header, _parent_header, _metadata, _content)
         debug(s"received: $msg")
@@ -350,7 +351,7 @@ object IScala extends App {
                     code=code)))
         }
 
-        send_status(ExecutionState.busy)
+        send_status(Busy)
 
         try {
             val ir = capture {
@@ -408,7 +409,7 @@ object IScala extends App {
                 send_error(msg, pyerr_content(e, _n))
         } finally {
             output.getBuffer.setLength(0)
-            send_status(ExecutionState.idle)
+            send_status(Idle)
         }
     }
 
@@ -417,7 +418,7 @@ object IScala extends App {
 
         send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
             complete_reply(
-                status=ExecutionStatus.ok,
+                status=OK,
                 matches=result.candidates,
                 text="")))
     }
@@ -477,7 +478,7 @@ object IScala extends App {
             while (!Thread.interrupted) {
                 val msg = recv_ipython(socket)
 
-                msg.header.msg_type match {
+                msg.header.msg_type.asInstanceOf[RequestMsgType] match {
                     case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
                     case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
                     case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
@@ -485,6 +486,7 @@ object IScala extends App {
                     case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
                     case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
                     case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
+                    case MsgType.input_request => /* TODO */
                 }
             }
         }
@@ -503,7 +505,7 @@ object IScala extends App {
     }
 
     start_heartbeat(heartbeat)
-    send_status(ExecutionState.starting)
+    send_status(Starting)
 
     log("Starting kernel event loops")
 
