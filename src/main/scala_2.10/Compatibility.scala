@@ -3,7 +3,6 @@ package org.refptr.iscala
 import scala.reflect.runtime.universe
 
 import scala.tools.nsc.Global
-import scala.tools.nsc.interpreter.IMain
 
 trait Compatibility {
     implicit class UniverseOps(u: universe.type) {

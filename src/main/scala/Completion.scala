@@ -1,6 +1,8 @@
 package org.refptr.iscala
 
-import scala.tools.nsc.interpreter.{IMain,Parsed,Completion,CompletionOutput,NamedParam}
+import org.apache.spark.repl.SparkIMain
+
+import scala.tools.nsc.interpreter.{Parsed,Completion,CompletionOutput,NamedParam}
 import scala.collection.mutable.ListBuffer
 import scala.reflect.NameTransformer
 
@@ -58,7 +60,7 @@ object CompletionAware {
         apply(() => map.keys.toList, map.get _)
 }
 
-class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput with Compatibility {
+class IScalaCompletion(val intp: SparkIMain) extends Completion with CompletionOutput with Compatibility {
     val global: intp.global.type = intp.global
     import global._
     import definitions.{PredefModule,AnyClass,AnyRefClass,ScalaPackage,JavaLangPackage}
@@ -145,7 +147,7 @@ class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput
         def excludeNames: List[String] = (anyref.methodNames filterNot anyRefMethodsToShow) :+ "_root_"
 
         def methodSignatureString(sym: Symbol) = {
-            IMain stripString intp.global.exitingTyper(new MethodSymbolOutput(sym).methodString())
+            SparkIMain stripString intp.global.exitingTyper(new MethodSymbolOutput(sym).methodString())
         }
 
         def exclude(name: String): Boolean = (
