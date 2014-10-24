@@ -1,15 +1,27 @@
 package org.refptr.iscala
 
-import java.io.File
-import scala.collection.mutable
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.repl.{SparkIMain, SparkILoop, SparkCommandLine}
 
-import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
+import scala.collection.{immutable, mutable}
+
+import scala.tools.nsc.interpreter.{NamedParam,  IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 
-class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false) extends InterpreterCompatibility {
-    protected val commandLine = new CommandLine(args.toList, println)
+class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false, usejavacp: Boolean=true) extends InterpreterCompatibility {
+  val commandLine = {
+    val cl = new SparkCommandLine(args.toList, println(_))
+    cl.settings.embeddedDefaults[this.type]
+    cl.settings.usejavacp.value = usejavacp
+    val totalClassPath = SparkILoop.getAddedJars.foldLeft(
+      cl.settings.classpath.value)((l, r) => ClassPath.join(l, r))
+    cl.settings.classpath.value =  ClassPath.join(totalClassPath, classpath)
+    cl
+  }
 
-    if (embedded) {
+
+
+  if (embedded) {
         commandLine.settings.embeddedDefaults[this.type]
     }
 
@@ -23,7 +35,9 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
 
-    val intp: IMain = new IMain(settings, printer)
+    //TODO: commit back to Spark
+    val intp:SparkIMain = new SparkIMain(commandLine.settings, printer)
+
     val runner = new Runner(intp.classLoader)
 
     private var _session = new Session
@@ -32,10 +46,33 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
     def session = _session
     def n = _n
 
+    var sc: SparkContext = _
+
+
     val In = mutable.Map.empty[Int, String]
     val Out = mutable.Map.empty[Int, Any]
 
-    def reset() {
+    this.initializeSpark()
+
+  def initializeSpark() {
+    sc = this.createSparkContext()
+    val namedParam = NamedParam[SparkContext]("sc", sc)
+    intp.beQuietDuring(bind(namedParam.name, namedParam.tpe, namedParam.value, immutable.List("@transient"))) match {
+      case IR.Success => return
+      case _ => throw new RuntimeException("Spark failed to initialize")
+    }
+
+    interpret("""
+import org.apache.spark.SparkContext._
+              """) match {
+      case Results.Exception(_,_,_,ee) => throw new RuntimeException("SparkContext failed to be imported", ee)
+      case Results.Value(value, tpe, repr) => return
+      case _ => throw new RuntimeException("SparkContext failed to be imported")
+    }
+  }
+
+
+  def reset() {
         finish()
         _session = new Session
         _n = 0
@@ -44,15 +81,49 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         intp.reset()
     }
 
-    def finish() {
+  def sparkCleanUp() {
+    if (sc!=null) {
+      sc.stop()
+      sc = null
+    }
+
+    //    interpret("sc.stop()")
+    //    match {
+    //      case Results.Failure(exception) => throw exception
+    //      case Results.Success(value) => return
+    //      case _ => throw new RuntimeException("initialization failed to compile")
+    //    }
+  }
+  def resetSpark() {
+    synchronized {
+      this.sparkCleanUp()
+
+      this.initializeSpark()
+    }
+  }
+
+  override def finalize() {
+    try{
+      synchronized {
+        session.endSession(n)
+      }
+    }catch{
+      case t: Throwable => throw t;
+    }finally{
+      super.finalize();
+    }
+  }
+
+  def resetOutput() {
+    output.getBuffer.setLength(0)
+  }
+
+  def finish() {
         _session.endSession(_n)
     }
 
     def isInitialized = intp.isInitializeComplete
 
-    def resetOutput() { // TODO: this shouldn't be maintained externally
-        output.getBuffer.setLength(0)
-    }
 
     def nextInput(): Int = { _n += 1; _n }
 
@@ -112,31 +183,47 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
-    def runCode(moduleName: String, fieldName: String): Any = {
+    def runCode(moduleName: String, path:String, fieldName: String): Any = {
         import scala.reflect.runtime.{universe=>u}
         val mirror = u.runtimeMirror(intp.classLoader)
         val module = mirror.staticModule(moduleName)
-        val instance = mirror.reflectModule(module).instance
-        val im = mirror.reflect(instance)
-        val fieldTerm = u.TermName(fieldName)
-        val field = im.symbol.typeSignature.member(fieldTerm).asTerm
-        im.reflectField(field).get
+        var instance = mirror.reflectModule(module).instance
+        path.split("\\.").foreach{ x=>
+          if(!x.isEmpty) {
+            val im = mirror.reflect(instance)
+            val fieldTerm = u.TermName(x)
+            val field = im.symbol.typeSignature.member(fieldTerm).asTerm
+            instance = im.reflectField(field).get
+          }
+        }
+//        val im = mirror.reflect(instance)
+//        val fieldTerm = u.TermName(fieldName)
+//        val field = im.symbol.typeSignature.member(fieldTerm).asTerm
+//        im.reflectField(field).get
+      val im = mirror.reflect(instance)
+      val fieldTerm = u.TermName(fieldName)
+      val field = im.symbol.typeSignature.member(fieldTerm).asTerm
+      im.reflectField(field).get
+
     }
 
     def display(req: intp.Request): Either[Data, Results.Result] = {
         import intp.memberHandlers.MemberHandler
 
         val displayName = "$display"
+        val displayModule = req.lineRep.pathTo(displayName)
+        val displayAccessPath =  req.accessPath
+//        val displayPath = req.lineRep.pathTo(displayName) + req.accessPath
         val displayPath = req.lineRep.pathTo(displayName)
 
-        object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
+        object DisplayObjectSourceCode extends SparkIMain.CodeAssembler[MemberHandler] {
             import intp.global.NoSymbol
 
             val NS = "org.refptr.iscala"
 
             val displayResult = req.value match {
                 case NoSymbol => s"$NS.Data()"
-                case symbol   => s"$NS.display.Repr.stringify(${intp.originalPath(symbol)})"
+                case symbol   => s"$NS.display.Repr.stringify(${intp.originalPath(symbol.name)})"
             }
 
             val preamble =
@@ -161,7 +248,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         val code = DisplayObjectSourceCode(req.handlers)
 
         if (!req.lineRep.compile(code)) Right(Results.Error)
-        else withException(req) { runCode(displayPath, displayName) }.left.map {
+        else withException(req) { runCode(displayModule, displayAccessPath, displayName) }.left.map {
             case Data(items @ _*) => Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
         }
     }
@@ -225,7 +312,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
         def requestFromLine(line: String, synthetic: Boolean): Either[IR.Result, Request] = {
             // XXX: Dirty hack to call a private method IMain.requestFromLine
-            val method = classOf[IMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
+            val method = classOf[SparkIMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
             val args = Array(line, synthetic).map(_.asInstanceOf[AnyRef])
             method.setAccessible(true)
             method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
@@ -288,4 +375,32 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             })
         } else None
     }
+
+  lazy val appName: String = "ISpark"
+
+  def createSparkContext(): SparkContext = {
+    val execUri = System.getenv("SPARK_EXECUTOR_URI")
+    val jars = SparkILoop.getAddedJars
+    val conf = new SparkConf()
+      .setMaster(getMaster())
+      .setAppName(this.appName)
+      .setJars(jars)
+      .set("spark.repl.class.uri", intp.classServer.uri) //very important! spark treat REPL very differently
+    if (execUri != null) {
+      conf.set("spark.executor.uri", execUri)
+    }
+    if (System.getenv("SPARK_HOME") != null) {
+      conf.setSparkHome(System.getenv("SPARK_HOME"))
+    }
+    new SparkContext(conf)
+  }
+
+  private def getMaster(): String = {
+    val master = {
+      val envMaster = sys.env.get("MASTER")
+      val propMaster = sys.props.get("spark.master")
+      propMaster.orElse(envMaster).getOrElse("local[*]")
+    }
+    master
+  }
 }

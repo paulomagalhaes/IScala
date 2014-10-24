@@ -44,15 +44,18 @@ object Dependencies {
 
     val specs2 = "org.specs2" %% "specs2" % "2.3.11" % Test
 
-    val reflect = Def.setting { "org.scala-lang" % "scala-reflect" % scalaVersion.value }
+    val reflect = Def.setting { "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided" }
 
-    val compiler = Def.setting { "org.scala-lang" % "scala-compiler" % scalaVersion.value }
+    val compiler = Def.setting { "org.scala-lang" % "scala-compiler" % scalaVersion.value  % "provided"}
 
     val paradise = "org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full
 
     val quasiquotes = scala_2_10("org.scalamacros" %% "quasiquotes" % "2.0.0")
 
     val xml = scala_2_11_+("org.scala-lang.modules" %% "scala-xml" % "1.0.2")
+
+    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.1.0" % "provided"
+
 }
 
 object IScalaBuild extends Build {
@@ -63,7 +66,7 @@ object IScalaBuild extends Build {
         description := "Scala-language backend for IPython",
         homepage := Some(url("http://iscala.github.io")),
         licenses := Seq("MIT-style" -> url("http://www.opensource.org/licenses/mit-license.php")),
-        scalaVersion := "2.11.2",
+        scalaVersion := "2.10.4",
         crossScalaVersions := Seq("2.10.4", "2.11.2"),
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
         addCompilerPlugin(Dependencies.paradise),
@@ -121,7 +124,7 @@ object IScalaBuild extends Build {
             },
             libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
+                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value, spark)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
