@@ -40,7 +40,7 @@ object Dependencies {
 
     val sqlite = "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
-    val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
+//    val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
 
     val specs2 = "org.specs2" %% "specs2" % "2.3.11" % Test
 
@@ -124,7 +124,7 @@ object IScalaBuild extends Build {
             },
             libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value, spark)
+                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite,  specs2, compiler.value, spark)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"

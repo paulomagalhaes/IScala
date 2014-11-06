@@ -1,6 +1,8 @@
 package org.refptr.iscala
 package tests
 
+import scala.util.Random
+
 trait InterpreterUtil {
     object Plain {
         def unapply(data: Data): Option[String] = data match {
@@ -15,7 +17,7 @@ trait InterpreterUtil {
             case _ => None
         }
     }
-
+    System.setProperty("spark.master.port", s"${4040 + Random.nextInt(20)}")
     // XXX: if (fork) ("", true) else (sys.props("java.class.path"), false)
     protected val intp = new Interpreter(sys.props("java.class.path"), Nil, false)
 
