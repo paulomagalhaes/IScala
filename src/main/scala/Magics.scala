@@ -1,5 +1,7 @@
 package org.refptr.iscala
 
+import org.refptr.iscala.Results.Result
+
 import scala.util.parsing.combinator.JavaTokenParsers
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
 
@@ -126,7 +128,7 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
 }
 
 object Magic {
-    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, ResetMagic, ClassPathMagic)
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, ResetMagic, ClassPathMagic, SqlMagic)
     val pattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
 
     def unapply(code: String): Option[(String, String, Option[Magic[_]])] = code match {
@@ -219,5 +221,11 @@ object ClassPathMagic extends EmptyMagic('classpath) {
         interpreter.intp.beSilentDuring { interpreter.bind("cp", "List[String]", cp) }
         println(interpreter.settings.classpath.value)
         Results.NoValue
+    }
+}
+
+object SqlMagic extends EntireMagic('sql){
+    override def handle(interpreter: Interpreter, code: String): Result = {
+        interpreter.interpret(s"""sql(\"${code}\")""")
     }
 }

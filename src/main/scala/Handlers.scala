@@ -59,8 +59,23 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
 
                     ir match {
+                        case result @ Results.Value(value, tpe, repr) if !silent =>
+                            if (store_history) {
+                                repr.default foreach { output =>
+                                    interpreter.storeOutput(result, output)
+                                }
+                            }
+
+                            ipy.publish(msg.pub(MsgType.pyout,
+                                pyout(
+                                    execution_count=n,
+                                    data=repr)))
+
+                            ipy.send_ok(msg, n)
                         case _: Results.Success =>
                             ipy.send_ok(msg, n)
+                        case exc @ Results.Exception(name, message, _, _) =>
+                            ipy.send_error(msg, pyerr(n, name, message, exc.traceback))
                         case _: Results.Failure =>
                             ipy.send_error(msg, n, interpreter.output.toString)
                     }
