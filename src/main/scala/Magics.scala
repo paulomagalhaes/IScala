@@ -25,7 +25,7 @@ object EmptyParsers extends MagicParsers[Unit] {
 }
 
 object EntireParsers extends MagicParsers[String] {
-    def magic: Parser[String] = ".*".r
+    def magic: Parser[String] = "(?s).*".r
 }
 
 sealed trait Op
@@ -225,7 +225,14 @@ object ClassPathMagic extends EmptyMagic('classpath) {
 }
 
 object SqlMagic extends EntireMagic('sql){
+    private def time[R](block: => R): R = {
+        val t0 = System.nanoTime()
+        val result = block    // call-by-name
+        val t1 = System.nanoTime()
+        println("Elapsed time: " + (t1 - t0)/1000000000.0 + "s")
+        result
+    }
     override def handle(interpreter: Interpreter, code: String): Result = {
-        interpreter.interpret(s"""sql(\"${code}\")""")
+        time(interpreter.interpret(s"""sql(\"${code}\")"""))
     }
 }
