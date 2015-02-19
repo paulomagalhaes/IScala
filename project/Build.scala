@@ -123,7 +123,7 @@ object IScalaBuild extends Build {
                 Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
             },
           resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo",
-          publishTo := Some("Uberdata Maven Repo" at "s3://uberdata-repo"),
+          publishTo := Some("Uberdata Maven Repo" at "s3://uberdata-repo/snapshots"),
           libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite,  specs2, compiler.value, spark)
