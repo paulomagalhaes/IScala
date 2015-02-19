@@ -54,7 +54,7 @@ object Dependencies {
 
     val xml = scala_2_11_+("org.scala-lang.modules" %% "scala-xml" % "1.0.2")
 
-    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.1.0" % "provided"
+    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.2.0" % "provided"
 
 }
 
@@ -117,12 +117,14 @@ object IScalaBuild extends Build {
 
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
-    lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
+    lazy val iscalaSettings = Defaults.coreDefaultSettings  ++ pluginSettings ++ {
         Seq(resolvers += {
                 val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
                 Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
             },
-            libraryDependencies ++= {
+          resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo",
+          publishTo := Some("Uberdata Maven Repo" at "s3://uberdata-repo"),
+          libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite,  specs2, compiler.value, spark)
             },
@@ -207,6 +209,7 @@ object IScalaBuild extends Build {
     }
 
     lazy val coreSettings = Defaults.coreDefaultSettings ++ Seq(
+        publish := {},
         libraryDependencies ++= {
             import Dependencies._
             quasiquotes.value ++ Seq(reflect.value, play_json, specs2)
@@ -214,6 +217,7 @@ object IScalaBuild extends Build {
     )
 
     lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
+        publish := {},
         libraryDependencies ++= {
             import Dependencies._
             quasiquotes.value ++ xml.value ++ Seq(reflect.value, codec, specs2)
@@ -225,4 +229,6 @@ object IScalaBuild extends Build {
     lazy val lib    = project in file("lib") settings(libSettings: _*) dependsOn(core)
 
     override def projects = Seq(IScala, core, lib)
+
+
 }
