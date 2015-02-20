@@ -122,9 +122,10 @@ object IScalaBuild extends Build {
                 val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
                 Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
             },
-          resolvers += "Uberdata Maven Repo" at "http://s3-us-west-2.amazonaws.com/uberdata-repo/release",
-          publishTo := Some("Uberdata Maven Repo" at "s3://uberdata-repo/snapshot"),
-          libraryDependencies ++= {
+            resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
+            resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
+            publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+            libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite,  specs2, compiler.value, spark)
             },
@@ -209,7 +210,10 @@ object IScalaBuild extends Build {
     }
 
     lazy val coreSettings = Defaults.coreDefaultSettings ++ Seq(
-        publish := {},
+        resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
+        resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
+        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+
         libraryDependencies ++= {
             import Dependencies._
             quasiquotes.value ++ Seq(reflect.value, play_json, specs2)
@@ -217,7 +221,10 @@ object IScalaBuild extends Build {
     )
 
     lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
-        publish := {},
+        resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
+        resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
+        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+
         libraryDependencies ++= {
             import Dependencies._
             quasiquotes.value ++ xml.value ++ Seq(reflect.value, codec, specs2)
