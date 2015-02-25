@@ -122,9 +122,9 @@ object IScalaBuild extends Build {
                 val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
                 Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
             },
-            resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
-            resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
-            publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+            resolvers += "Uberdata Maven Repo" at "s3://sparknotebook-repo/release",
+            resolvers += "Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot",
+            publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot"),
             libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite,  specs2, compiler.value, spark)
@@ -210,9 +210,9 @@ object IScalaBuild extends Build {
     }
 
     lazy val coreSettings = Defaults.coreDefaultSettings ++ Seq(
-        resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
-        resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
-        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+        resolvers += "Uberdata Maven Repo" at "s3://sparknotebook-repo/release",
+        resolvers += "Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot",
+        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot"),
 
         libraryDependencies ++= {
             import Dependencies._
@@ -221,9 +221,9 @@ object IScalaBuild extends Build {
     )
 
     lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
-        resolvers += "Uberdata Maven Repo" at "s3://uberdata-repo/release",
-        resolvers += "Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot",
-        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://uberdata-repo/snapshot"),
+        resolvers += "Uberdata Maven Repo" at "s3://sparknotebook-repo/release",
+        resolvers += "Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot",
+        publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot"),
 
         libraryDependencies ++= {
             import Dependencies._
