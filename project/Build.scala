@@ -25,7 +25,7 @@ object Dependencies {
 
     val ivy = Def.setting {
         val organization = if (isScala_2_10.value) "org.scala-sbt" else "org.refptr.sbt211"
-        organization % "ivy" % "0.13.7"
+        organization % "ivy" % "0.13.6"
     }
 
     val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
@@ -118,10 +118,11 @@ object IScalaBuild extends Build {
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
     lazy val iscalaSettings = Defaults.coreDefaultSettings  ++ pluginSettings ++ {
-        Seq(resolvers += {
-                val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
+        Seq(resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+, 
+               { val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
                 Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
-            },
+            }),
             resolvers += "Uberdata Maven Repo" at "s3://sparknotebook-repo/release",
             resolvers += "Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot",
             publishTo := Some("Uberdata Snapshot Maven Repo" at "s3://sparknotebook-repo/snapshot"),
