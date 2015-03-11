@@ -25,7 +25,7 @@ object Dependencies {
 
     val ivy = Def.setting {
         val organization = if (isScala_2_10.value) "org.scala-sbt" else "org.refptr.sbt211"
-        organization % "ivy" % "0.13.6"
+        organization % "ivy" % "0.13.7"
     }
 
     val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
