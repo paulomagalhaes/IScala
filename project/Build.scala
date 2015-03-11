@@ -59,7 +59,10 @@ object Dependencies {
 }
 
 object IScalaBuild extends Build {
-    override lazy val settings = super.settings ++ Seq(
+  
+net.virtualvoid.sbt.graph.Plugin.graphSettings
+  
+override lazy val settings = super.settings ++ Seq(
         organization := "org.refptr.iscala",
         name := "IScala",
         version := "0.3-SNAPSHOT",
